@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Omarchy Dojo
+Name[da]=Omarchy Dojo
+Comment=Train Omarchy shortcuts, one belt at a time
+Comment[da]=Træn Omarchy-genveje, ét bælte ad gangen
+Exec=omarchy-dojo
+Icon=omarchy-dojo
+Terminal=false
+Categories=Utility;
+StartupWMClass=omarchy-dojo

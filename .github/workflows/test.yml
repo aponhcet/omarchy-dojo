@@ -1,0 +1,52 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    # The app ships as an Arch package built against Arch's Qt, so it's tested there.
+    container: archlinux:latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install git for the checkout
+        run: pacman -Syu --noconfirm --needed git
+
+      - uses: actions/checkout@v4
+
+      - name: Install the package's dependencies
+        # pkgbuild/PKGBUILD is the list. Once the recipe is in omarchy-pkgs,
+        # that copy is the one a release builds, so prefer it when it exists.
+        run: |
+          recipe="$RUNNER_TEMP/PKGBUILD"
+          if ! curl -fsSL "https://raw.githubusercontent.com/omacom/omarchy-pkgs/master/pkgbuilds/omarchy-dojo/PKGBUILD" -o "$recipe"; then
+            cp pkgbuild/PKGBUILD "$recipe"
+          fi
+          source "$recipe"
+          deps=("${depends[@]}" "${makedepends[@]}" ${checkdepends+"${checkdepends[@]}"})
+          pacman -S --noconfirm --needed base-devel desktop-file-utils "${deps[@]%%[<>=]*}"
+
+      - name: Set up a user and a locale like a desktop's
+        run: |
+          useradd -m tester
+          chown -R tester .
+          sed -i 's/^#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
+          locale-gen
+
+      - name: Build
+        run: su tester -c bin/build
+
+      - name: Test
+        run: su tester -c 'LANG=en_US.UTF-8 bin/test'
+
+      - name: Check the launcher entry
+        run: desktop-file-validate pkgbuild/omarchy-dojo.desktop
